@@ -25,7 +25,11 @@ namespace frontier_exploration
     using costmap_2d::NO_INFORMATION;
     using costmap_2d::FREE_SPACE;
 
-    BoundedExploreLayer::BoundedExploreLayer(){}
+    BoundedExploreLayer::BoundedExploreLayer() : 
+        tf_buffer_(ros::Duration(10))
+    {
+        tf2_ros::TransformListener tf(tf_buffer_);
+    }
 
     BoundedExploreLayer::~BoundedExploreLayer(){
         polygonService_.shutdown();
@@ -91,12 +95,12 @@ namespace frontier_exploration
 
         if(start_pose.header.frame_id != layered_costmap_->getGlobalFrameID()){
             //error out if no transform available
-            if(!tf_listener_.waitForTransform(layered_costmap_->getGlobalFrameID(), start_pose.header.frame_id,ros::Time::now(),ros::Duration(10))) {
+            if(!tf_buffer_.canTransform(layered_costmap_->getGlobalFrameID(), start_pose.header.frame_id,ros::Time::now(),ros::Duration(10))) {
                 ROS_ERROR_STREAM("Couldn't transform from "<<layered_costmap_->getGlobalFrameID()<<" to "<< start_pose.header.frame_id);
                 return false;
             }
             geometry_msgs::PoseStamped temp_pose = start_pose;
-            tf_listener_.transformPose(layered_costmap_->getGlobalFrameID(),temp_pose,start_pose);
+            tf_buffer_.transform(temp_pose,start_pose,layered_costmap_->getGlobalFrameID());
         }
 
         //initialize frontier search implementation
@@ -105,7 +109,7 @@ namespace frontier_exploration
         std::list<Frontier> frontier_list = frontierSearch.searchFrom(start_pose.pose.position);
 
         if(frontier_list.size() == 0){
-            ROS_DEBUG("No frontiers found, exploration complete");
+            ROS_WARN("No frontiers found, exploration complete");
             return false;
         }
 
@@ -157,7 +161,7 @@ namespace frontier_exploration
             next_frontier.pose.position = selected.initial;
         }
 
-        next_frontier.pose.orientation = tf::createQuaternionMsgFromYaw( yawOfVector(start_pose.pose.position, next_frontier.pose.position) );
+        next_frontier.pose.orientation = createQuaternionMsgFromYaw( yawOfVector(start_pose.pose.position, next_frontier.pose.position) );
         return true;
 
     }
@@ -183,7 +187,7 @@ namespace frontier_exploration
         polygon_.points.clear();
 
         //error if no transform available between polygon and costmap
-        if(!tf_listener_.waitForTransform(layered_costmap_->getGlobalFrameID(), polygon_stamped.header.frame_id,ros::Time::now(),ros::Duration(10))) {
+        if(!tf_buffer_.canTransform(layered_costmap_->getGlobalFrameID(), polygon_stamped.header.frame_id,ros::Time::now(),ros::Duration(10))) {
             ROS_ERROR_STREAM("Couldn't transform from "<<layered_costmap_->getGlobalFrameID()<<" to "<< polygon_stamped.header.frame_id);
             return false;
         }
@@ -193,7 +197,7 @@ namespace frontier_exploration
         in.header = polygon_stamped.header;
         BOOST_FOREACH(geometry_msgs::Point32 point32, polygon_stamped.polygon.points){
             in.point = costmap_2d::toPoint(point32);
-            tf_listener_.transformPoint(layered_costmap_->getGlobalFrameID(),in,out);
+            tf_buffer_.transform(in,out,layered_costmap_->getGlobalFrameID());
             polygon_.points.push_back(costmap_2d::toPoint32(out.point));
         }
 

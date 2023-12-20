@@ -6,10 +6,14 @@
 #include <costmap_2d/GenericPluginConfig.h>
 #include <dynamic_reconfigure/server.h>
 
+#include <tf2_ros/transform_listener.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+
 #include <geometry_msgs/Polygon.h>
 #include <frontier_exploration/Frontier.h>
 #include <frontier_exploration/UpdateBoundaryPolygon.h>
 #include <frontier_exploration/GetNextFrontier.h>
+#include <frontier_exploration/geometry_tools.h>
 
 namespace frontier_exploration
 {
@@ -102,7 +106,8 @@ private:
     ros::ServiceServer polygonService_;
     ros::ServiceServer frontierService_;
     geometry_msgs::Polygon polygon_;
-    tf::TransformListener tf_listener_;
+
+    tf2_ros::Buffer tf_buffer_;
 
     ros::Publisher frontier_cloud_pub;
 

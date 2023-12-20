@@ -11,6 +11,7 @@
 #include <frontier_exploration/UpdateBoundaryPolygon.h>
 
 #include <tf/transform_listener.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 
 #include <move_base_msgs/MoveBaseAction.h>
 
@@ -31,8 +32,8 @@ public:
      * @brief Constructor for the server, sets up this node's ActionServer for exploration and ActionClient to move_base for robot movement.
      * @param name Name for SimpleActionServer
      */
-    FrontierExplorationServer(std::string name) :
-        tf_listener_(ros::Duration(10.0)),
+    FrontierExplorationServer(std::string name, tf2_ros::Buffer& tf_buffer) :
+        tf_buffer_(tf_buffer),
         private_nh_("~"),
         as_(nh_, name, boost::bind(&FrontierExplorationServer::executeCb, this, _1), false),
         move_client_("move_base",true),
@@ -41,7 +42,9 @@ public:
         private_nh_.param<double>("frequency", frequency_, 0.0);
         private_nh_.param<double>("goal_aliasing", goal_aliasing_, 0.1);
 
-        explore_costmap_ros_ = boost::shared_ptr<costmap_2d::Costmap2DROS>(new costmap_2d::Costmap2DROS("explore_costmap", tf_listener_));
+        tf2_ros::TransformListener tf_listener(tf_buffer_);
+
+        explore_costmap_ros_ = boost::shared_ptr<costmap_2d::Costmap2DROS>(new costmap_2d::Costmap2DROS("explore_costmap", tf_buffer_));
 
         as_.registerPreemptCallback(boost::bind(&FrontierExplorationServer::preemptCb, this));
         as_.start();
@@ -51,7 +54,7 @@ private:
 
     ros::NodeHandle nh_;
     ros::NodeHandle private_nh_;
-    tf::TransformListener tf_listener_;
+    tf2_ros::Buffer& tf_buffer_;
     actionlib::SimpleActionServer<frontier_exploration::ExploreTaskAction> as_;
 
     boost::shared_ptr<costmap_2d::Costmap2DROS> explore_costmap_ros_;
@@ -110,16 +113,18 @@ private:
             geometry_msgs::PoseStamped goal_pose;
 
             //get current robot pose in frame of exploration boundary
-            tf::Stamped<tf::Pose> robot_pose;
-            explore_costmap_ros_->getRobotPose(robot_pose);
+            // tf::Stamped<tf::Pose> robot_pose;
+            // explore_costmap_ros_->getRobotPose(robot_pose);
 
-            //provide current robot pose to the frontier search service request
-            tf::poseStampedTFToMsg(robot_pose,srv.request.start_pose);
+            // //provide current robot pose to the frontier search service request
+            // tf::poseStampedTFToMsg(robot_pose,srv.request.start_pose);
+            // getRobotPose(srv.request.start_pose, explore_costmap_ros_);
+            explore_costmap_ros_->getRobotPose(srv.request.start_pose);
 
             //evaluate if robot is within exploration boundary using robot_pose in boundary frame
             geometry_msgs::PoseStamped eval_pose = srv.request.start_pose;
             if(eval_pose.header.frame_id != goal->explore_boundary.header.frame_id){
-                tf_listener_.transformPose(goal->explore_boundary.header.frame_id, srv.request.start_pose, eval_pose);
+                tf_buffer_.transform(srv.request.start_pose, eval_pose, goal->explore_boundary.header.frame_id);
             }
 
             //check if robot is not within exploration boundary and needs to return to center of search area
@@ -137,13 +142,13 @@ private:
                 eval_point.point = eval_pose.pose.position;
                 if(eval_point.header.frame_id != goal->explore_center.header.frame_id){
                     geometry_msgs::PointStamped temp = eval_point;
-                    tf_listener_.transformPoint(goal->explore_center.header.frame_id, temp, eval_point);
+                    tf_buffer_.transform(temp, eval_point, goal->explore_center.header.frame_id);
                 }
 
                 //set goal pose to exploration center
                 goal_pose.header = goal->explore_center.header;
                 goal_pose.pose.position = goal->explore_center.point;
-                goal_pose.pose.orientation = tf::createQuaternionMsgFromYaw( yawOfVector(eval_point.point, goal->explore_center.point) );
+                goal_pose.pose.orientation = createQuaternionMsgFromYaw( yawOfVector(eval_point.point, goal->explore_center.point) );
 
             }else if(getNextFrontier.call(srv)){ //if in boundary, try to find next frontier to search
 
@@ -256,8 +261,10 @@ private:
 int main(int argc, char** argv)
 {
     ros::init(argc, argv, "explore_server");
+    tf2_ros::Buffer buffer(ros::Duration(10));
+    tf2_ros::TransformListener tf(buffer);
 
-    frontier_exploration::FrontierExplorationServer server(ros::this_node::getName());
+    frontier_exploration::FrontierExplorationServer server(ros::this_node::getName(), buffer);
     ros::spin();
     return 0;
 }

@@ -4,6 +4,7 @@
 #include <geometry_msgs/Polygon.h>
 #include <geometry_msgs/Point.h>
 #include <costmap_2d/costmap_2d.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 
 namespace frontier_exploration{
 
@@ -86,6 +87,13 @@ namespace frontier_exploration{
       }
 
       return yaw;
+  }
+
+  auto createQuaternionMsgFromYaw(double yaw)
+  {
+    tf2::Quaternion q;
+    q.setRPY(0, 0, yaw);
+    return tf2::toMsg(q);
   }
 
 }

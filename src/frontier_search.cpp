@@ -28,11 +28,31 @@ std::list<Frontier> FrontierSearch::searchFrom(geometry_msgs::Point position){
     }
 
     //make sure map is consistent and locked for duration of search
-    boost::unique_lock < boost::shared_mutex > lock(*(costmap_.getLock()));
+    boost::unique_lock < boost::recursive_mutex > lock(*(costmap_.getMutex()));
 
     map_ = costmap_.getCharMap();
     size_x_ = costmap_.getSizeInCellsX();
     size_y_ = costmap_.getSizeInCellsY();
+
+    // // Find all possible numbers in the map
+    // std::vector<unsigned int> map_poss_numb;
+    // map_poss_numb.push_back(static_cast<unsigned int>(map_[0]));
+    // for(size_t i = 0; i < size_x_ * size_y_; i++)
+    // {
+    //     int same_numb = 0;
+    //     for(size_t k = 0; k < map_poss_numb.size(); k++)
+    //     {
+    //         if(static_cast<unsigned int>(map_[i]) == map_poss_numb[k])
+    //             same_numb++;
+    //     }
+    //     if(same_numb == 0)
+    //         map_poss_numb.push_back(static_cast<unsigned int>(map_[i]));
+    // }
+    // for(size_t i = 0; i < map_poss_numb.size(); i++)
+    // {
+    //     std::cout << map_poss_numb[i] << std::endl;
+    // }
+    // throw;
 
     //initialize flag arrays to keep track of visited and frontier cells
     std::vector<bool> frontier_flag(size_x_ * size_y_, false);
@@ -144,7 +164,7 @@ Frontier FrontierSearch::buildNewFrontier(unsigned int initial_cell, unsigned in
 }
 
 bool FrontierSearch::isNewFrontierCell(unsigned int idx, const std::vector<bool>& frontier_flag){
-
+    // ROS_WARN_STREAM(static_cast<int>(map_[idx]) << " " << static_cast<int>(NO_INFORMATION) << " " << static_cast<int>(FREE_SPACE) << " " << frontier_flag[idx]);
     //check that cell is unknown and not already marked as frontier
     if(map_[idx] != NO_INFORMATION || frontier_flag[idx]){
         return false;
