@@ -1,14 +1,4 @@
-frontier_exploration ![asdf](https://travis-ci.org/paulbovbel/frontier_exploration.svg?branch=hydro-devel)
-====================
+# frontier_exploration
+ROS Node and Costmap 2D plugin layer for frontier exploration
 
-
-
-Implementation of frontier exploration (http://www.robotfrontier.com/papers/cira97.pdf) for ROS Hydro, extending on the existing navigation stack (costmap_2d, move_base).
-
-Wiki: http://wiki.ros.org/frontier_exploration
-
-API Doc: http://docs.ros.org/hydro/api/frontier_exploration/html/annotated.html
-
-Video:
-
-[![Demo Video](http://img.youtube.com/vi/3W1ufJ7rpCA/0.jpg)](https://www.youtube.com/watch?v=3W1ufJ7rpCA)
+See http://wiki.ros.org/frontier_exploration
