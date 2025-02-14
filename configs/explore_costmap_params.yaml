@@ -12,7 +12,7 @@ explore_costmap:
 
   plugins:
     - {name: static_layer,            type: "costmap_2d::StaticLayer"}
-    - {name: explore_boundary,        type: "frontier_exploration::BoundedExploreLayer"}
+    - {name: polygon_layer,        type: "polygon_layer::PolygonLayer"}
     # Can disable sensor layer if gmapping is fast enough to update scans
     - {name: sensor,                  type: "costmap_2d::ObstacleLayer"}
     # - {name: obstacle_layer,          type: "costmap_2d::VoxelLayer"}
